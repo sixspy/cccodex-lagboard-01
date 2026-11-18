@@ -8,7 +8,7 @@
 <style>
   :root{--bg:#eef3f8;--card:#fff;--ink:#142033;--line:#d5dee8;--blue:#2563eb;--warn:#d97706;--bad:#dc2626;--ok:#059669}
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-  .wrap{display:grid;grid-template-columns:292px 1fr;min-height:100vh}
+  .wrap{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
   aside{background:#10233f;color:#e7eefc;padding:22px 18px}
   aside h1{font-family:"Segoe UI",system-ui,sans-serif;font-size:28px;margin:0 0 6px}
   aside p{color:#9db0cc;font-size:13px;line-height:1.5;margin:0 0 18px}
@@ -18,29 +18,24 @@
   .mode{margin-top:8px;display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#1d3b66}
   .mode.bad{background:#5b1d1d}.mode.warn{background:#5b4012}.mode.ok{background:#134e3a}
   main{padding:20px}
-  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
   .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .seg button{border:0;background:transparent;padding:9px 12px;cursor:pointer}
   .seg button.on{background:var(--blue);color:#fff}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
   .card h3{margin:0;font-size:12px;color:#64748b;font-weight:500}
   .card strong{display:block;font-family:"Segoe UI",system-ui,sans-serif;font-size:28px;margin-top:6px}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
   input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin:5px 0 10px}
   .primary{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
   .ghost{background:#fff;border:1px solid #334155;color:#334155;border-radius:8px;padding:6px 8px;cursor:pointer}
   .login{max-width:420px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
   .err{color:var(--bad);min-height:18px}
-  .hint{color:#64748b;font-size:12px}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#e2e8f0}
-  .pill.bad{background:#fee2e2;color:#991b1b}.pill.warn{background:#fef3c7;color:#92400e}.pill.ok{background:#d1fae5;color:#065f46}
-  .rowbad{background:#fff7f7}
   .timeline{border-left:2px solid #cbd5e1;margin-left:8px;padding-left:14px}
   .timeline .item{margin-bottom:12px;position:relative}
   .timeline .item:before{content:"";position:absolute;left:-19px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 </style>
 </head>
 <body>
@@ -63,10 +58,9 @@ createApp({
     const token=ref(localStorage.getItem('lagboard_token')||'');
     const user=ref(localStorage.getItem('lagboard_user')||'');
     const username=ref('admin'), password=ref('123456'), err=ref(''), tab=ref(0), actionErr=ref('');
-    const sources=ref([]), arrivals=ref([]), catchups=ref([]), late=ref([]), watermark=ref({items:[],frozen:0,degraded:0});
-    const contention=ref([]), deviations=ref([]), reconcile=ref({consistent:true,mismatches:[],views:[]}), rules=ref({});
+    const sources=ref([]), arrivals=ref([]), catchups=ref([]);
     const form=ref({source:'订单源', source_clock:'2026-11-16T10:00:00', ingest_clock:'2026-11-16T10:40:00'});
-    const nav=['到达登记','源目录与分级','迟到详情','补采附页','水位卡片'];
+    const nav=['到达登记','滞后分级','补齐恢复'];
     const frozen=computed(()=>sources.value.filter(s=>s.output_mode==='冻结').length);
     const degraded=computed(()=>sources.value.filter(s=>s.output_mode==='降级只读').length);
     function modeClass(m){return m==='冻结'?'bad':(m==='降级只读'?'warn':'ok');}
@@ -94,41 +88,17 @@ createApp({
       arrivals.value=Array.isArray(a.items)?a.items:[];
       const c=await loadJson('/api/catchups'); if(c===null) return;
       catchups.value=Array.isArray(c.items)?c.items:[];
-      const l=await loadJson('/api/late'); if(l===null) return;
-      late.value=Array.isArray(l.items)?l.items:[];
-      const w=await loadJson('/api/watermark'); if(w===null) return;
-      watermark.value=w;
-      const ct=await loadJson('/api/contention'); if(ct===null) return;
-      contention.value=Array.isArray(ct.items)?ct.items:[];
-      const dv=await loadJson('/api/deviations'); if(dv===null) return;
-      deviations.value=Array.isArray(dv.items)?dv.items:[];
-      const rc=await loadJson('/api/reconcile'); if(rc===null) return;
-      reconcile.value=rc;
-      const ru=await loadJson('/api/rules'); if(ru===null) return;
-      rules.value=ru;
       if(sources.value.length && !form.value.source) form.value.source=sources.value[0].name;
     }
     async function recordArrival(){
       actionErr.value='';
       const r=await fetch('/api/arrivals',{method:'POST',headers:auth(),body:JSON.stringify(form.value)});
-      const j=await r.json();
-      if(r.ok){
-        actionErr.value=`已落库 #${j.arrival_id} · 滞后 ${j.lag_minutes} 分 · ${j.level} · 源输出态 ${j.output_mode} · 路径 ${j.grade_path}`;
-      }else{
-        actionErr.value=`${j.code||'失败'}：${j.detail||''}`;
-      }
+      const j=await r.json(); actionErr.value=r.ok?(`滞后 ${j.lag_minutes} 分 · ${j.level} · ${j.output_mode}`):(j.detail||'失败');
       await refresh();
     }
-    async function doCatchup(name){
-      actionErr.value='';
-      const r=await fetch('/api/catchup/'+encodeURIComponent(name),{method:'POST',headers:auth()});
-      const j=await r.json().catch(()=>({}));
-      actionErr.value=r.ok?`${name} 已补齐恢复为 ${j.output_mode}（基线到达 #${j.restored_after_arrival_id}）`:`${j.code||'失败'}：${j.detail||''}`;
-      await refresh();
-    }
+    async function doCatchup(name){await fetch('/api/catchup/'+encodeURIComponent(name),{method:'POST',headers:auth()});await refresh();}
     onMounted(()=>{if(token.value)refresh();});
-    return {token,user,username,password,err,tab,nav,sources,arrivals,catchups,late,watermark,contention,deviations,reconcile,rules,
-      form,actionErr,frozen,degraded,modeClass,login,logout,recordArrival,doCatchup};
+    return {token,user,username,password,err,tab,nav,sources,arrivals,catchups,form,actionErr,frozen,degraded,modeClass,login,logout,recordArrival,doCatchup};
   },
   template:`
   <div v-if="!token" class="login">
@@ -140,10 +110,10 @@ createApp({
   <div v-if="token" class="wrap">
     <aside>
       <h1>源到达SLA</h1>
-      <p>迟到分级 · 甲路径同事务落库。分级册当日锁定：{{rules.path}} / {{rules.rule_day}}。</p>
+      <p>左侧是各源当前输出态；右侧登记到达并做补齐恢复。</p>
       <div class="src" v-for="s in sources" :key="s.id">
         <b>{{s.name}}</b>
-        <span>SLA {{s.sla_minutes}} 分钟 · 最近 #{{s.last_arrival_id||'—'}} {{s.last_level||''}}</span>
+        <span>SLA {{s.sla_minutes}} 分钟</span>
         <div class="mode" :class="modeClass(s.output_mode)">{{s.output_mode}}</div>
       </div>
       <div style="margin-top:18px;font-size:12px;color:#9db0cc">{{user}} · <a href="#" style="color:#fff" @click.prevent="logout">退出</a></div>
@@ -151,83 +121,41 @@ createApp({
     <main>
       <div class="bar">
         <div class="seg"><button v-for="(n,i) in nav" :key="n" :class="{on:tab===i}" @click="tab=i">{{n}}</button></div>
-        <div :class="reconcile.consistent?'pill ok':'pill bad'">
-          五处读数 {{reconcile.consistent?'一致':'不一致'}} · 偏差 {{reconcile.mismatches.length}}
-        </div>
       </div>
       <div class="cards">
         <div class="card"><h3>源数量</h3><strong>{{sources.length}}</strong></div>
         <div class="card"><h3>冻结中</h3><strong>{{frozen}}</strong></div>
         <div class="card"><h3>降级只读</h3><strong>{{degraded}}</strong></div>
-        <div class="card"><h3>争用记录</h3><strong>{{contention.length}}</strong></div>
       </div>
-
       <div class="card" v-show="tab===0">
-        <h3 style="margin-bottom:8px">登记到达（到达行与源输出态同一事务）</h3>
+        <h3 style="margin-bottom:8px">登记到达</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div><label>源</label><select v-model="form.source"><option v-for="s in sources" :value="s.name">{{s.name}}</option></select></div>
           <div><label>源时钟</label><input v-model="form.source_clock"/></div>
           <div><label>摄入时钟</label><input v-model="form.ingest_clock"/></div>
         </div>
-        <button class="primary" @click="recordArrival">计算迟到分级并改写源输出态</button>
+        <button class="primary" @click="recordArrival">计算滞后并更新输出态</button>
         <div class="err">{{actionErr}}</div>
         <div class="timeline" style="margin-top:16px">
           <div class="item" v-for="a in (arrivals||[]).slice(0,8)" :key="a.id">
             <b>{{a.source}}</b> · 滞后 {{a.lag_minutes}} 分 · {{a.level}}
-            <div class="hint">{{a.source_clock}} → {{a.ingest_clock}} · 值班 {{a.actor}}</div>
+            <div style="color:#64748b;font-size:12px">{{a.source_clock}} → {{a.ingest_clock}}</div>
           </div>
         </div>
       </div>
-
       <div class="card" v-show="tab===1">
-        <h3>源目录与时限档</h3>
-        <p class="hint">≤SLA 正常可写；≤2×SLA 告警降级只读；更久违约冻结。分级只由迟到分钟推出。</p>
-        <table><thead><tr><th>源</th><th>SLA</th><th>输出态</th><th>最近到达</th><th>最近等级</th><th></th></tr></thead>
+        <h3>分级规则</h3>
+        <p style="color:#64748b;font-size:13px">≤SLA 正常可写；≤2×SLA 告警降级只读；更久违约冻结。</p>
+        <table><thead><tr><th>源</th><th>SLA</th><th>输出态</th><th></th></tr></thead>
         <tbody><tr v-for="s in sources" :key="'g'+s.id">
-          <td>{{s.name}}</td><td>{{s.sla_minutes}}</td>
-          <td><span class="pill" :class="modeClass(s.output_mode)">{{s.output_mode}}</span></td>
-          <td>#{{s.last_arrival_id||'—'}}</td><td>{{s.last_level||'—'}}</td>
+          <td>{{s.name}}</td><td>{{s.sla_minutes}}</td><td>{{s.output_mode}}</td>
           <td><button class="ghost" @click="doCatchup(s.name)">补齐恢复</button></td>
         </tr></tbody></table>
-        <div class="err">{{actionErr}}</div>
       </div>
-
       <div class="card" v-show="tab===2">
-        <h3>迟到详情（逐条按迟到分钟重算）</h3>
-        <table><thead><tr><th>#</th><th>源</th><th>迟到分钟</th><th>落库等级</th><th>重算等级</th><th>应有输出态</th><th>当前输出态</th><th>判定</th></tr></thead>
-        <tbody><tr v-for="a in late" :key="'l'+a.id" :class="{'rowbad':!a.consistent}">
-          <td>{{a.id}}</td><td>{{a.source}}</td><td>{{a.lag_minutes}}</td><td>{{a.level}}</td>
-          <td>{{a.expected_level}}</td><td>{{a.expected_mode}}</td><td>{{a.output_mode}}</td>
-          <td><span class="pill" :class="a.consistent?'ok':'bad'">{{a.consistent?'对齐':'不符'}}</span></td>
-        </tr></tbody></table>
-      </div>
-
-      <div class="card" v-show="tab===3">
-        <div class="grid2">
-          <div>
-            <h3>补采附页</h3>
-            <table><thead><tr><th>源</th><th>状态</th><th>恢复为</th><th>时间</th></tr></thead>
-            <tbody><tr v-for="x in catchups" :key="'c'+x.id"><td>{{x.source}}</td><td>{{x.status}}</td><td>{{x.restored_mode}}</td><td>{{x.created_at}}</td></tr></tbody></table>
-          </div>
-          <div>
-            <h3>迟到分级争用</h3>
-            <table><thead><tr><th>源</th><th>先到</th><th>后到（仅记争用）</th><th>迟到</th><th>时间</th></tr></thead>
-            <tbody><tr v-for="x in contention" :key="'k'+x.id"><td>{{x.source}}</td><td>{{x.winner}}</td><td>{{x.loser}}</td><td>{{x.lag_minutes}} 分</td><td>{{x.created_at}}</td></tr></tbody></table>
-            <h3 style="margin-top:14px">分级偏差</h3>
-            <table><thead><tr><th>类别</th><th>源</th><th>值班</th><th>详情</th></tr></thead>
-            <tbody><tr v-for="x in deviations" :key="'d'+x.id"><td>{{x.kind}}</td><td>{{x.source||'—'}}</td><td>{{x.actor}}</td><td>{{x.detail}}</td></tr></tbody></table>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" v-show="tab===4">
-        <h3>水位卡片</h3>
-        <table><thead><tr><th>源</th><th>SLA</th><th>最近到达</th><th>最近迟到</th><th>最近等级</th><th>输出态</th><th>补齐后有效态</th><th>到达数</th><th>迟到数</th></tr></thead>
-        <tbody><tr v-for="w in watermark.items" :key="'w'+w.source">
-          <td>{{w.source}}</td><td>{{w.sla_minutes}}</td><td>#{{w.last_arrival_id||'—'}}</td>
-          <td>{{w.last_lag_minutes==null?'—':w.last_lag_minutes+' 分'}}</td><td>{{w.last_level||'—'}}</td>
-          <td>{{w.output_mode}}</td><td>{{w.effective_mode}}</td><td>{{w.arrival_count}}</td><td>{{w.late_count}}</td>
-        </tr></tbody></table>
+        <h3>补齐记录</h3>
+        <table><thead><tr><th>源</th><th>状态</th><th>恢复为</th><th>时间</th></tr></thead>
+        <tbody><tr v-for="x in catchups" :key="x.id"><td>{{x.source}}</td><td>{{x.status}}</td><td>{{x.restored_mode}}</td><td>{{x.created_at}}</td></tr></tbody></table>
       </div>
     </main>
   </div>`
