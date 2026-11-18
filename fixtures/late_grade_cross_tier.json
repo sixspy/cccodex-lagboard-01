@@ -1,0 +1,12 @@
+{
+  "description": "迟到分钟已跨档（130 分 > 2×30 分），源目录输出态却仍停在可写，到达行的等级也仍写正常；用于复现“迟到分钟与时限档对不齐、可写态未切”的错切。",
+  "source": "物流源",
+  "sla_minutes": 30,
+  "lag_minutes": 130,
+  "source_clock": "2026-11-16T07:00:00",
+  "ingest_clock": "2026-11-16T09:10:00",
+  "stale_output_mode": "可写",
+  "observed_level": "正常",
+  "expected_level": "违约",
+  "expected_output_mode": "冻结"
+}
