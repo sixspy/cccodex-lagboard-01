@@ -1,0 +1,33 @@
+{
+  "name": "迟到分钟跨档却源输出态未切（错切复现夹具）",
+  "policy": "甲",
+  "sources": [
+    {"name": "订单源", "sla_minutes": 15, "output_mode": "可写"}
+  ],
+  "seed_arrivals": [
+    {"source": "订单源", "source_clock": "2026-11-16T09:00:00", "ingest_clock": "2026-11-16T10:10:00", "lag_minutes": 70, "level": "违约"}
+  ],
+  "attempt": {
+    "source": "订单源",
+    "source_clock": "2026-11-16T10:00:00",
+    "ingest_clock": "2026-11-16T11:10:00",
+    "with_duty_token": false,
+    "operator": "值班甲"
+  },
+  "observed_bug": {
+    "lag_minutes": 70,
+    "band": "违约",
+    "stale_before": {"lag_minutes": 70, "output_mode": "可写", "aligned": false},
+    "on_write_without_duty": {"http_status": 200, "arrival_written": true, "source_output_mode_after": "冻结"},
+    "note": "迟到分钟已跨入违约档而源输出态仍是可写（撕裂）；缺值班令牌的分级写却仍落库并切档，五处读数对不上"
+  },
+  "expected_after": {
+    "lag_minutes": 70,
+    "band": "违约",
+    "stale_flagged": true,
+    "write_without_duty": {"http_status": 403, "arrival_written": false, "source_output_mode_after": "可写"},
+    "audit_kind": "越权",
+    "detail_effective": "令牌拒写",
+    "write_with_duty": {"http_status": 200, "source_output_mode_after": "冻结", "aligned": true}
+  }
+}

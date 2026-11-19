@@ -32,6 +32,30 @@
 - 补齐整源解冻 vs 按业务日窗口解冻
 - 只认源时钟 vs 双时钟取严
 
+## 迟到分级写路径（已落地）
+
+口径锁定在 `docs/迟到分级说明.md`（**甲路径 · 值班令牌鉴权**，乙路径不启用，当天不许改口）。
+
+分级表（lag = 摄入时钟 − 源时钟，SLA 为该源时限）：
+
+| 条件 | 档位 | 源输出态 |
+|------|------|----------|
+| lag ≤ SLA | 正常 | 可写 |
+| SLA < lag ≤ 2×SLA | 告警 | 降级只读 |
+| lag > 2×SLA | 违约 | 冻结 |
+
+写路径要点：
+
+- `POST /api/duty/token` 领值班令牌；`POST /api/arrivals` 须带 `X-Duty-Token`。
+- 缺令牌：**拒写到达行（403）、记越权、源输出态保持未切档**，不出半截成功。
+- 带令牌：到达行与源输出态**同事务**落库；超 2×SLA 必切「冻结」，不会写库成功而源输出态仍旧。
+- 同源同源时钟同摄入时钟唯一：两名值班抢交时后到者 409，只记「迟到分级争用」。
+- 偏离锁定册（请求带其它口径或改册）：423 并记「分级偏了」。
+- 五处读数（源目录、到达列表、迟到详情、补采附页、水位卡片）由 `GET /api/snapshot` 同一快照派生；`band_conflict` 标出迟到档与输出态撕裂。
+- 迟到详情 `GET /api/delay/{source}` 标注 `effective_mechanism`（令牌拒写 / 争用排队 / 分级落库）与乙路径档位回退「未启用」。
+
+回归测试：`tests/test_grade_failure.py`、`tests/test_repro_mis_switch.py`（错切夹具 `fixtures/lag_cross_grade_stale_mode.json`）、`tests/test_readouts_consistent.py`。
+
 ## 启动（一键）
 
 `powershell

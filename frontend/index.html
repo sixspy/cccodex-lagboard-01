@@ -10,32 +10,33 @@
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
   .wrap{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
   aside{background:#10233f;color:#e7eefc;padding:22px 18px}
-  aside h1{font-family:"Segoe UI",system-ui,sans-serif;font-size:28px;margin:0 0 6px}
-  aside p{color:#9db0cc;font-size:13px;line-height:1.5;margin:0 0 18px}
+  aside h1{font-size:28px;margin:0 0 6px} aside p{color:#9db0cc;font-size:13px;line-height:1.5;margin:0 0 18px}
   .src{background:#173054;border:1px solid #274872;border-radius:12px;padding:12px;margin-bottom:10px}
-  .src b{display:block;font-size:15px}
-  .src span{font-size:12px;color:#9db0cc}
+  .src b{display:block;font-size:15px}.src span{font-size:12px;color:#9db0cc;display:block;margin-top:3px}
   .mode{margin-top:8px;display:inline-block;padding:3px 8px;border-radius:999px;font-size:12px;background:#1d3b66}
   .mode.bad{background:#5b1d1d}.mode.warn{background:#5b4012}.mode.ok{background:#134e3a}
-  main{padding:20px}
-  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  main{padding:20px}.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap}
   .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .seg button{border:0;background:transparent;padding:9px 12px;cursor:pointer}
-  .seg button.on{background:var(--blue);color:#fff}
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .seg button{border:0;background:transparent;padding:9px 12px;cursor:pointer}.seg button.on{background:var(--blue);color:#fff}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
   .card h3{margin:0;font-size:12px;color:#64748b;font-weight:500}
-  .card strong{display:block;font-family:"Segoe UI",system-ui,sans-serif;font-size:28px;margin-top:6px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
+  .card strong{display:block;font-size:28px;margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
   input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin:5px 0 10px}
   .primary{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:10px 12px;cursor:pointer}
   .ghost{background:#fff;border:1px solid #334155;color:#334155;border-radius:8px;padding:6px 8px;cursor:pointer}
   .login{max-width:420px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
-  .err{color:var(--bad);min-height:18px}
+  .err{color:var(--bad);min-height:18px}.ok{color:var(--ok)}
+  .dutybar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+  .dutybar>div{flex:0 0 220px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#e2e8f0}
+  .badge.on{background:#134e3a;color:#fff}.badge.off{background:#5b1d1d;color:#fff}
   .timeline{border-left:2px solid #cbd5e1;margin-left:8px;padding-left:14px}
   .timeline .item{margin-bottom:12px;position:relative}
   .timeline .item:before{content:"";position:absolute;left:-19px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px}.kv b{color:#64748b;font-weight:500}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 </style>
 </head>
 <body>
@@ -43,28 +44,23 @@
 <noscript><p style="padding:24px;background:#b91c1c;color:#fff">需要启用 JavaScript</p></noscript>
 <div id="boot-hint" style="display:none;padding:24px;font-family:sans-serif;background:#fef3c7;color:#111">页面脚本未加载。请确认可访问 /static/vue.global.prod.js</div>
 <script>
-setTimeout(function () {
-  if (!window.Vue) {
-    var e = document.getElementById("boot-hint");
-    if (e) e.style.display = "block";
-  }
-}, 800);
+setTimeout(function(){if(!window.Vue){var e=document.getElementById("boot-hint");if(e)e.style.display="block";}},800);
 </script>
-
 <script>
 const {createApp,ref,onMounted,computed}=Vue;
 createApp({
   setup(){
     const token=ref(localStorage.getItem('lagboard_token')||'');
     const user=ref(localStorage.getItem('lagboard_user')||'');
-    const username=ref('admin'), password=ref('123456'), err=ref(''), tab=ref(0), actionErr=ref('');
-    const sources=ref([]), arrivals=ref([]), catchups=ref([]);
+    const username=ref('admin'), password=ref('123456'), err=ref(''), tab=ref(0), actionErr=ref(''), actionOk=ref('');
+    const sources=ref([]), arrivals=ref([]), catchups=ref([]), cards=ref({}), policy=ref({}), events=ref([]);
+    const dutyOperator=ref('值班甲'), dutyToken=ref(''), dutyMsg=ref('');
     const form=ref({source:'订单源', source_clock:'2026-11-16T10:00:00', ingest_clock:'2026-11-16T10:40:00'});
-    const nav=['到达登记','滞后分级','补齐恢复'];
-    const frozen=computed(()=>sources.value.filter(s=>s.output_mode==='冻结').length);
-    const degraded=computed(()=>sources.value.filter(s=>s.output_mode==='降级只读').length);
+    const detailSource=ref('订单源'), detail=ref({});
+    const nav=['到达登记','迟到分级','迟到详情','补采附页','水位卡片'];
     function modeClass(m){return m==='冻结'?'bad':(m==='降级只读'?'warn':'ok');}
     function auth(){return {Authorization:'Bearer '+token.value,'Content-Type':'application/json'};}
+    function dutyAuth(){return {...auth(), ...(dutyToken.value?{'X-Duty-Token':dutyToken.value}:{})};}
     async function login(){
       err.value='';
       const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username.value,password:password.value})});
@@ -73,7 +69,7 @@ createApp({
       localStorage.setItem('lagboard_token',j.token); localStorage.setItem('lagboard_user',j.username);
       await refresh();
     }
-    function logout(){token.value='';user.value='';localStorage.removeItem('lagboard_token');localStorage.removeItem('lagboard_user');}
+    function logout(){token.value='';user.value='';dutyToken.value='';localStorage.removeItem('lagboard_token');localStorage.removeItem('lagboard_user');}
     async function loadJson(url){
       const r=await fetch(url,{headers:auth()});
       const j=await r.json().catch(()=>({}));
@@ -82,23 +78,45 @@ createApp({
     }
     async function refresh(){
       if(!token.value) return;
-      const s=await loadJson('/api/sources'); if(s===null) return;
-      sources.value=Array.isArray(s.items)?s.items:[];
+      const s=await loadJson('/api/snapshot'); if(s===null) return;
+      sources.value=Array.isArray(s.items)?s.items:[]; cards.value=s.cards||{};
+      catchups.value=Array.isArray(s.catchups)?s.catchups:[];
       const a=await loadJson('/api/arrivals'); if(a===null) return;
       arrivals.value=Array.isArray(a.items)?a.items:[];
-      const c=await loadJson('/api/catchups'); if(c===null) return;
-      catchups.value=Array.isArray(c.items)?c.items:[];
-      if(sources.value.length && !form.value.source) form.value.source=sources.value[0].name;
+      const p=await loadJson('/api/grade/policy'); if(p===null) return;
+      policy.value=p||{};
+      const e=await loadJson('/api/grade/events'); if(e===null) return;
+      events.value=Array.isArray(e.items)?e.items:[];
+      if(sources.value.length && !sources.value.some(x=>x.name===form.value.source)) form.value.source=sources.value[0].name;
+      if(sources.value.length && !sources.value.some(x=>x.name===detailSource.value)) detailSource.value=sources.value[0].name;
+      await loadDetail();
+    }
+    async function loadDetail(){
+      if(!token.value) return;
+      const d=await loadJson('/api/delay/'+encodeURIComponent(detailSource.value));
+      if(d && !d.detail) detail.value=d;
+    }
+    async function issueDuty(){
+      dutyMsg.value='';
+      const r=await fetch('/api/duty/token',{method:'POST',headers:auth(),body:JSON.stringify({operator:dutyOperator.value})});
+      const j=await r.json();
+      if(!r.ok){dutyMsg.value=j.detail||'领取失败';return;}
+      dutyToken.value=j.duty_token; dutyMsg.value='已领令牌 · '+j.operator;
     }
     async function recordArrival(){
-      actionErr.value='';
-      const r=await fetch('/api/arrivals',{method:'POST',headers:auth(),body:JSON.stringify(form.value)});
-      const j=await r.json(); actionErr.value=r.ok?(`滞后 ${j.lag_minutes} 分 · ${j.level} · ${j.output_mode}`):(j.detail||'失败');
+      actionErr.value='';actionOk.value='';
+      const r=await fetch('/api/arrivals',{method:'POST',headers:dutyAuth(),body:JSON.stringify(form.value)});
+      const j=await r.json();
+      if(r.ok){ actionOk.value=`迟到 ${j.lag_minutes} 分 · ${j.level} · 输出态 ${j.mode_prev}→${j.output_mode} · ${j.operator} · ${j.policy_path}路径`; }
+      else { actionErr.value=(j.detail||'失败'); }
       await refresh();
     }
     async function doCatchup(name){await fetch('/api/catchup/'+encodeURIComponent(name),{method:'POST',headers:auth()});await refresh();}
+    function selectDetail(name){detailSource.value=name; loadDetail();}
     onMounted(()=>{if(token.value)refresh();});
-    return {token,user,username,password,err,tab,nav,sources,arrivals,catchups,form,actionErr,frozen,degraded,modeClass,login,logout,recordArrival,doCatchup};
+    return {token,user,username,password,err,tab,nav,sources,arrivals,catchups,cards,policy,events,
+      dutyOperator,dutyToken,dutyMsg,form,detailSource,detail,actionErr,actionOk,
+      modeClass,login,logout,refresh,issueDuty,recordArrival,doCatchup,selectDetail,loadDetail};
   },
   template:`
   <div v-if="!token" class="login">
@@ -110,10 +128,12 @@ createApp({
   <div v-if="token" class="wrap">
     <aside>
       <h1>源到达SLA</h1>
-      <p>左侧是各源当前输出态；右侧登记到达并做补齐恢复。</p>
-      <div class="src" v-for="s in sources" :key="s.id">
+      <p>左侧源目录读数；分级落库须领值班令牌（甲路径）。</p>
+      <div class="src" v-for="s in sources" :key="s.name">
         <b>{{s.name}}</b>
-        <span>SLA {{s.sla_minutes}} 分钟</span>
+        <span>SLA {{s.sla_minutes}} 分钟 · 迟到 {{s.lag_minutes}} 分 · {{s.level}}</span>
+        <span>前值 {{s.mode_prev}} · 事件 {{s.events['越权']||0}}越权 / {{s.events['迟到分级争用']||0}}争用</span>
+        <span v-if="s.band_conflict" style="color:#fca5a5">读数撕裂：迟到档与输出态不一致</span>
         <div class="mode" :class="modeClass(s.output_mode)">{{s.output_mode}}</div>
       </div>
       <div style="margin-top:18px;font-size:12px;color:#9db0cc">{{user}} · <a href="#" style="color:#fff" @click.prevent="logout">退出</a></div>
@@ -121,41 +141,108 @@ createApp({
     <main>
       <div class="bar">
         <div class="seg"><button v-for="(n,i) in nav" :key="n" :class="{on:tab===i}" @click="tab=i">{{n}}</button></div>
+        <div>
+          <span class="badge" :class="dutyToken?'on':'off'">{{dutyToken?'值班令牌已领':'未领值班令牌'}}</span>
+          <span class="badge" :class="policy.locked?'on':'off'">分级册 {{policy.path}}路径 · {{policy.locked?'已锁定':'未锁定'}}</span>
+        </div>
       </div>
       <div class="cards">
-        <div class="card"><h3>源数量</h3><strong>{{sources.length}}</strong></div>
-        <div class="card"><h3>冻结中</h3><strong>{{frozen}}</strong></div>
-        <div class="card"><h3>降级只读</h3><strong>{{degraded}}</strong></div>
+        <div class="card"><h3>源数量</h3><strong>{{cards.sources||0}}</strong></div>
+        <div class="card"><h3>冻结中</h3><strong>{{cards.frozen||0}}</strong></div>
+        <div class="card"><h3>降级只读</h3><strong>{{cards.degraded||0}}</strong></div>
+        <div class="card"><h3>最大迟到(分)</h3><strong>{{cards.max_lag||0}}</strong></div>
       </div>
+
       <div class="card" v-show="tab===0">
-        <h3 style="margin-bottom:8px">登记到达</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <h3 style="margin-bottom:8px">值班令牌</h3>
+        <div class="dutybar">
+          <div><label>采集值班</label><input v-model="dutyOperator"/></div>
+          <button class="ghost" @click="issueDuty">领值班令牌</button>
+          <span style="font-size:13px;color:#64748b">{{dutyMsg}}</span>
+        </div>
+        <h3 style="margin:8px 0">登记到达</h3>
+        <div class="grid3">
           <div><label>源</label><select v-model="form.source"><option v-for="s in sources" :value="s.name">{{s.name}}</option></select></div>
           <div><label>源时钟</label><input v-model="form.source_clock"/></div>
           <div><label>摄入时钟</label><input v-model="form.ingest_clock"/></div>
         </div>
-        <button class="primary" @click="recordArrival">计算滞后并更新输出态</button>
-        <div class="err">{{actionErr}}</div>
+        <button class="primary" @click="recordArrival">分级落库并切源输出态</button>
+        <div class="err">{{actionErr}}</div><div class="ok">{{actionOk}}</div>
         <div class="timeline" style="margin-top:16px">
           <div class="item" v-for="a in (arrivals||[]).slice(0,8)" :key="a.id">
-            <b>{{a.source}}</b> · 滞后 {{a.lag_minutes}} 分 · {{a.level}}
+            <b>{{a.source}}</b> · 迟到 {{a.lag_minutes}} 分 · {{a.level}}
             <div style="color:#64748b;font-size:12px">{{a.source_clock}} → {{a.ingest_clock}}</div>
           </div>
         </div>
       </div>
+
       <div class="card" v-show="tab===1">
-        <h3>分级规则</h3>
-        <p style="color:#64748b;font-size:13px">≤SLA 正常可写；≤2×SLA 告警降级只读；更久违约冻结。</p>
-        <table><thead><tr><th>源</th><th>SLA</th><th>输出态</th><th></th></tr></thead>
-        <tbody><tr v-for="s in sources" :key="'g'+s.id">
-          <td>{{s.name}}</td><td>{{s.sla_minutes}}</td><td>{{s.output_mode}}</td>
+        <h3>迟到分级册（锁定）</h3>
+        <div class="kv" style="margin:8px 0">
+          <b>落库写法</b><span>{{policy.path}}路径 · {{policy.label}}（乙路径 {{policy.alternative}}，禁止混用）</span>
+          <b>生效日</b><span>{{policy.effective_date}}</span>
+          <b>锁定</b><span>{{policy.locked?'是 · 当天不许改口':'否'}}</span>
+          <b>册指纹</b><span style="font-family:monospace">{{(policy.doc_sha||'').slice(0,16)}}…</span>
+        </div>
+        <p style="color:#64748b;font-size:13px">≤SLA 正常可写；≤2×SLA 告警降级只读；更久违约冻结。到达行与源输出态同事务落库。</p>
+        <table><thead><tr><th>源</th><th>SLA</th><th>迟到(分)</th><th>档位</th><th>输出态</th><th>前值</th><th>撕裂</th><th></th></tr></thead>
+        <tbody><tr v-for="s in sources" :key="'g'+s.name">
+          <td>{{s.name}}</td><td>{{s.sla_minutes}}</td><td>{{s.lag_minutes}}</td><td>{{s.level}}</td>
+          <td>{{s.output_mode}}</td><td>{{s.mode_prev}}</td><td>{{s.band_conflict?'是':'否'}}</td>
           <td><button class="ghost" @click="doCatchup(s.name)">补齐恢复</button></td>
         </tr></tbody></table>
+        <h3 style="margin:16px 0 8px">分级事件（越权 / 争用 / 偏了）</h3>
+        <table><thead><tr><th>时间</th><th>源</th><th>类型</th><th>值班</th><th>说明</th></tr></thead>
+        <tbody><tr v-for="e in (events||[]).slice(0,10)" :key="e.id">
+          <td>{{e.created_at}}</td><td>{{e.source}}</td><td>{{e.kind}}</td><td>{{e.operator}}</td><td>{{e.detail}}</td>
+        </tr></tbody></table>
       </div>
+
       <div class="card" v-show="tab===2">
-        <h3>补齐记录</h3>
-        <table><thead><tr><th>源</th><th>状态</th><th>恢复为</th><th>时间</th></tr></thead>
-        <tbody><tr v-for="x in catchups" :key="x.id"><td>{{x.source}}</td><td>{{x.status}}</td><td>{{x.restored_mode}}</td><td>{{x.created_at}}</td></tr></tbody></table>
+        <h3>迟到详情</h3>
+        <div style="max-width:320px"><label>选择源</label>
+          <select v-model="detailSource" @change="loadDetail"><option v-for="s in sources" :value="s.name">{{s.name}}</option></select>
+          <button class="ghost" @click="loadDetail">刷新</button>
+        </div>
+        <div class="kv" style="margin-top:10px">
+          <b>源</b><span>{{detail.name}}</span>
+          <b>SLA</b><span>{{detail.sla_minutes}} 分钟</span>
+          <b>迟到分钟</b><span>{{detail.lag_minutes}}</span>
+          <b>档位</b><span>{{detail.level}}</span>
+          <b>输出态</b><span>{{detail.output_mode}}</span>
+          <b>撕裂前值</b><span>{{detail.mode_prev}}</span>
+          <b>读数撕裂</b><span>{{detail.band_conflict?'是 · 迟到档与输出态不一致':'否 · 已对齐'}}</span>
+          <b>生效机制</b><span><b class="badge" :class="detail.effective_mechanism==='令牌拒写'?'off':''">{{detail.effective_mechanism}}</b></span>
+          <b>档位回退</b><span>{{detail.rollback_status}}（乙路径）</span>
+          <b>越权计数</b><span>{{detail.events?detail.events['越权']||0:0}}</span>
+          <b>争用计数</b><span>{{detail.events?detail.events['迟到分级争用']||0:0}}</span>
+          <b>到达条数</b><span>{{detail.arrival_count}}</span>
+        </div>
+        <p style="color:#64748b;font-size:12px">令牌拒写 = 缺值班令牌被拒且未切档；档位回退为乙路径机制，本仓未启用。</p>
+      </div>
+
+      <div class="card" v-show="tab===3">
+        <h3>补采附页</h3>
+        <table><thead><tr><th>源</th><th>状态</th><th>恢复为</th><th>当前输出态</th><th>时间</th></tr></thead>
+        <tbody><tr v-for="x in catchups" :key="x.id">
+          <td>{{x.source}}</td><td>{{x.status}}</td><td>{{x.restored_mode}}</td>
+          <td>{{(sources.find(s=>s.name===x.source)||{}).output_mode}}</td><td>{{x.created_at}}</td>
+        </tr></tbody></table>
+      </div>
+
+      <div class="card" v-show="tab===4">
+        <h3>水位卡片</h3>
+        <div class="cards" style="grid-template-columns:repeat(4,1fr);margin:10px 0">
+          <div class="card"><h3>可写</h3><strong>{{cards.writable||0}}</strong></div>
+          <div class="card"><h3>降级只读</h3><strong>{{cards.degraded||0}}</strong></div>
+          <div class="card"><h3>冻结</h3><strong>{{cards.frozen||0}}</strong></div>
+          <div class="card"><h3>争用</h3><strong>{{cards.contention||0}}</strong></div>
+        </div>
+        <table><thead><tr><th>源</th><th>SLA</th><th>迟到(分)</th><th>档位</th><th>输出态</th><th>前值</th><th>撕裂</th></tr></thead>
+        <tbody><tr v-for="s in sources" :key="'w'+s.name">
+          <td>{{s.name}}</td><td>{{s.sla_minutes}}</td><td>{{s.lag_minutes}}</td><td>{{s.level}}</td>
+          <td>{{s.output_mode}}</td><td>{{s.mode_prev}}</td><td>{{s.band_conflict?'是':'否'}}</td>
+        </tr></tbody></table>
       </div>
     </main>
   </div>`
